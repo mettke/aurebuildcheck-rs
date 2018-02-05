@@ -96,12 +96,7 @@ fn file_might_be_binary(file: &String) -> bool {
         return false
     }
 
-    let ext = match path.extension()  { // .unwrap().to_str().unwrap();
-        Some(ext) => ext,
-        None => return false,
-    };
-    let ext = ext.to_str().unwrap();
-
+    let ext = file.split(".").last().unwrap();
 
     match ext {
         "" => return true,
