@@ -13,13 +13,11 @@
 
 extern crate rayon;
 
-use std::fs::*;
 use std::process::Command;
 use rayon::prelude::*;
 use std::path::*;
-use std::ffi::OsStr;
 
-fn check_binary(filename: &String) {
+fn check_binary(filename: &str) {
     // todo: print package name here
     let mut print_string = String::new();
     let name_string = filename;
@@ -90,52 +88,45 @@ fn get_files(package: &str) -> Vec<String> {
     files
 }
 
-fn file_might_be_binary(file: &String) -> bool {
+fn file_might_be_binary(file: &str) -> bool {
     let path = PathBuf::from(file);
     if !path.is_file() {
-        return false
+        return false;
     }
 
-    let ext = file.split(".").last().unwrap();
+    let ext = file.split('.').last().unwrap();
 
     match ext {
-        "" => return true,
-        "so" => return true,
         "a" | "png" | "la" | "ttf" | "gz" | "html" | "css" | "h" | "c" | "cxx" | "xml" | "rgb"
         | "gif" | "wav" | "ogg" | "ogv" | "avi" | "opus" | "mp3" | "po" | "txt" | "jpg"
         | "jpeg" | "bmp" | "xcf" | "mo" | "rb" | "py" | "lua" | "config" | "cfg" | "svg"
-        | "desktop" | "conf" | "pdf" | "xz" => return false,
-        _ => return true,
+        | "desktop" | "conf" | "pdf" | "xz" => false,
+        "" | "so" | _ => true,
     }
-    return true;
 }
 
-fn is_elf(file: &String) -> bool {
+fn is_elf(file: &str) -> bool {
     // check if file is elf via "file"
     let mut file_output: Vec<String> = Vec::new();
     match Command::new("file").arg(&file).output() {
         Ok(out) => {
             let output = String::from_utf8_lossy(&out.stdout);
             let output = output.into_owned();
-            for line in output.split(" ") {
+            for line in output.split(' ') {
                 file_output.push(line.into());
             }
         }
         Err(e) => panic!("ERROR '{}'", e),
     }
-    if file_output.len() > 2 && file_output[1] == String::from("ELF") {
-        return true;
-    } else {
-        return false;
-    }
+
+    file_output.len() > 2 && file_output[1] == "ELF" // ret bool
 }
 
-fn check_file(file: String) {
-    let print_string = String::new();
-    if !file_might_be_binary(&file) || !is_elf(&file) {
+fn check_file(file: &str) {
+    if !file_might_be_binary(file) || !is_elf(file) {
         return;
     }
-    check_binary(&file);
+    check_binary(file);
 }
 
 fn main() {
@@ -143,9 +134,9 @@ fn main() {
 
     for pkg in list_of_packages {
         let files = get_files(&pkg);
-        files.par_iter().for_each(|file| check_file(file.to_string()));
+        files.par_iter().for_each(|file| check_file(file));
     }
-/*
+    /*
     for pkg in list_of_packages {
         let files = get_files(&pkg);
         for file in files {
@@ -153,18 +144,5 @@ fn main() {
             check_file(file);
         }
     }
-
 */
-
-
-    /*
-    println!("{:?}", list_of_packages);
-    for pkg in list_of_packages {
-        let mut files = Vec::new();
-        files = get_files(&pkg);
-
-        println!("package: {}, files: {:?}", pkg, files);
-    }
-    files.par_iter().for_each(|binary| check_file(binary));
-    */
 }
