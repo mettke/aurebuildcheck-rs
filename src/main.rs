@@ -47,7 +47,7 @@ fn check_binary(filename: &str) {
 
 fn get_packages() -> Vec<String> {
     let mut packages = Vec::new();
-    match Command::new("rpm").arg("-q").arg("-a").output() {
+    match Command::new("pacman").arg("-Qqm").output() {
         Ok(out) => {
             let output = String::from_utf8_lossy(&out.stdout);
             let output = output.into_owned();
@@ -62,9 +62,8 @@ fn get_packages() -> Vec<String> {
 
 fn get_files(package: &str) -> Vec<String> {
     let mut files = Vec::new();
-    match Command::new("rpm")
-        .arg("-q")
-        .arg("-l")
+    match Command::new("pacman")
+        .arg("-Qql")
         .arg(&package)
         .output()
     {
