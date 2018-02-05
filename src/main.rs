@@ -18,16 +18,10 @@ use rayon::prelude::*;
 use std::path::*;
 
 fn check_binary(filename: &str) {
-    // todo: print package name here
     let mut print_string = String::new();
-    //print_string.push_str(&format!("checking: {}", &packagename));
 
     match Command::new("ldd").arg(&filename).output() {
         Ok(out) => {
-            //    println!("git gc error\nstatus: {}", out.status);
-            //    println!("stdout:\n {}", String::from_utf8_lossy(&out.stdout));
-            //    println!("stderr:\n {}", String::from_utf8_lossy(&out.stderr));
-            //if out.status.success() {}
             let output = String::from_utf8_lossy(&out.stdout);
             let output = output.into_owned();
             let mut first = true;
@@ -42,7 +36,6 @@ fn check_binary(filename: &str) {
                     ));
                     first = false;
                 }
-                //println!("{}", line);
             }
         }
         Err(e) => panic!("ERROR '{}'", e),
@@ -136,13 +129,4 @@ fn main() {
         let files = get_files(&pkg);
         files.par_iter().for_each(|file| check_file(file));
     }
-    /*
-    for pkg in list_of_packages {
-        let files = get_files(&pkg);
-        for file in files {
-        //    println!("{:?}", file);
-            check_file(file);
-        }
-    }
-*/
 }
