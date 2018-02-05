@@ -16,7 +16,9 @@ extern crate rayon;
 use std::fs::*;
 use std::process::Command;
 use rayon::prelude::*;
-
+use std::path::*;
+use std::ffi::OsStr;
+/*
 fn check_file(path: &DirEntry) {
     let mut print_string = String::new();
     let name_string = path.path();
@@ -51,6 +53,8 @@ fn check_file(path: &DirEntry) {
         println!("{}", print_string.trim());
     }
 }
+
+*/
 
 fn get_packages() -> Vec<String> {
     let mut packages = Vec::new();
@@ -87,9 +91,33 @@ fn get_files(package: &str) -> Vec<String> {
     files
 }
 
+fn file_might_be_binary(file: String) -> bool {
+    let path = PathBuf::from(file);
+    if !path.is_file() {
+        return false;
+    }
+    let ext = path.extension().unwrap().to_str().unwrap();
+
+    match ext {
+        "" => return true,
+        "so" => return true,
+        "a" | "png" | "la" | "ttf" | "gz" | "html" | "css" | "h" | "c" | "cxx" | "xml" | "rgb"
+        | "gif" | "wav" | "ogg" | "ogv" | "avi" | "opus" | "mp3" | "po" | "txt" | "jpg"
+        | "jpeg" | "bmp" | "xcf" | "mo" | "rb" | "py" | "lua" | "config" | "cfg" | "svg"
+        | "desktop" | "conf" | "pdf" => return false,
+        _ => return true,
+    }
+
+    return true;
+}
+
 fn main() {
     let list_of_packages = get_packages();
 
+    for pkg in list_of_packages {
+        //    check_package(&pkg);
+    }
+    /*
     println!("{:?}", list_of_packages);
     for pkg in list_of_packages {
         let mut files = Vec::new();
@@ -98,4 +126,5 @@ fn main() {
         println!("package: {}, files: {:?}", pkg, files);
     }
     //files.par_iter().for_each(|binary| check_file(binary));
+    */
 }
