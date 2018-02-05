@@ -18,8 +18,8 @@ use std::process::Command;
 use rayon::prelude::*;
 use std::path::*;
 use std::ffi::OsStr;
-/*
-fn check_file(path: &DirEntry) {
+
+fn check_single_file(path: &DirEntry) {
     let mut print_string = String::new();
     let name_string = path.path();
     print_string.push_str(&format!("checking: {}", &name_string.display()));
@@ -53,8 +53,6 @@ fn check_file(path: &DirEntry) {
         println!("{}", print_string.trim());
     }
 }
-
-*/
 
 fn get_packages() -> Vec<String> {
     let mut packages = Vec::new();
@@ -91,7 +89,7 @@ fn get_files(package: &str) -> Vec<String> {
     files
 }
 
-fn file_might_be_binary(file: String) -> bool {
+fn file_might_be_binary(file: &String) -> bool {
     let path = PathBuf::from(file);
     if !path.is_file() {
         return false;
@@ -107,8 +105,37 @@ fn file_might_be_binary(file: String) -> bool {
         | "desktop" | "conf" | "pdf" => return false,
         _ => return true,
     }
-
     return true;
+}
+
+fn is_elf(file: &String) -> bool {
+    // check if file is elf via "file"
+    let mut file_output: Vec<String> = Vec::new();
+    match Command::new("file").arg(&file).output() {
+        Ok(out) => {
+            let output = String::from_utf8_lossy(&out.stdout);
+            let output = output.into_owned();
+            for line in output.split(" ") {
+                file_output.push(line.into());
+            }
+        }
+        Err(e) => panic!("ERROR '{}'", e),
+    }
+    if file_output.len() > 2 && file_output[1] == String::from("ELF") {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+fn check_file(file: String) {
+    let print_string = String::new();
+    if !file_might_be_binary(&file) || !is_elf(&file) {
+        return;
+    }
+    // file might be binary and is ELF
+
+    // file might be binary, check...
 }
 
 fn main() {
