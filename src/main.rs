@@ -121,7 +121,7 @@ fn is_elf(file: &str) -> bool {
     file_output.len() > 2 && file_output[1] == "ELF" // ret bool
 }
 
-fn check_file(file: &str, pkgname: &str) {
+fn check_file(file: &str) {
     if !file_might_be_binary(file) || !is_elf(file) {
         return;
     }
@@ -133,7 +133,7 @@ fn main() {
     for pkg in list_of_packages {
         println!("Checking package: {}", pkg);
         let files = get_files(&pkg);
-        files.par_iter().for_each(|file| check_file(file, &pkg));
+        files.par_iter().for_each(|file| check_file(file));
     }
     /*
     for pkg in list_of_packages {
