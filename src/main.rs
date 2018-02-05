@@ -19,10 +19,11 @@ use rayon::prelude::*;
 use std::path::*;
 use std::ffi::OsStr;
 
-fn check_single_file(path: &DirEntry) {
+fn check_binary(filename: &String) {
+    // todo: print package name here
     let mut print_string = String::new();
-    let name_string = path.path();
-    print_string.push_str(&format!("checking: {}", &name_string.display()));
+    let name_string = filename;
+    print_string.push_str(&format!("checking: {}", &name_string));
 
     match Command::new("ldd").arg(&name_string).output() {
         Ok(out) => {
@@ -36,7 +37,7 @@ fn check_single_file(path: &DirEntry) {
             for line in output.lines() {
                 if line.ends_with("=> not found") {
                     if first {
-                        print_string.push_str(&format!("\nbinary: {}\n", &name_string.display()));
+                        print_string.push_str(&format!("\nbinary: {}\n", &name_string));
                     }
                     print_string.push_str(&format!(
                         "\t\t is missing: {}\n",
@@ -92,9 +93,15 @@ fn get_files(package: &str) -> Vec<String> {
 fn file_might_be_binary(file: &String) -> bool {
     let path = PathBuf::from(file);
     if !path.is_file() {
-        return false;
+        return false
     }
-    let ext = path.extension().unwrap().to_str().unwrap();
+
+    let ext = match path.extension()  { // .unwrap().to_str().unwrap();
+        Some(ext) => ext,
+        None => return false,
+    };
+    let ext = ext.to_str().unwrap();
+
 
     match ext {
         "" => return true,
@@ -102,7 +109,7 @@ fn file_might_be_binary(file: &String) -> bool {
         "a" | "png" | "la" | "ttf" | "gz" | "html" | "css" | "h" | "c" | "cxx" | "xml" | "rgb"
         | "gif" | "wav" | "ogg" | "ogv" | "avi" | "opus" | "mp3" | "po" | "txt" | "jpg"
         | "jpeg" | "bmp" | "xcf" | "mo" | "rb" | "py" | "lua" | "config" | "cfg" | "svg"
-        | "desktop" | "conf" | "pdf" => return false,
+        | "desktop" | "conf" | "pdf" | "xz" => return false,
         _ => return true,
     }
     return true;
@@ -133,17 +140,28 @@ fn check_file(file: String) {
     if !file_might_be_binary(&file) || !is_elf(&file) {
         return;
     }
-    // file might be binary and is ELF
-
-    // file might be binary, check...
+    check_binary(&file);
 }
 
 fn main() {
     let list_of_packages = get_packages();
 
     for pkg in list_of_packages {
-        //    check_package(&pkg);
+        let files = get_files(&pkg);
+        files.par_iter().for_each(|file| check_file(file.to_string()));
     }
+/*
+    for pkg in list_of_packages {
+        let files = get_files(&pkg);
+        for file in files {
+        //    println!("{:?}", file);
+            check_file(file);
+        }
+    }
+
+*/
+
+
     /*
     println!("{:?}", list_of_packages);
     for pkg in list_of_packages {
@@ -152,6 +170,6 @@ fn main() {
 
         println!("package: {}, files: {:?}", pkg, files);
     }
-    //files.par_iter().for_each(|binary| check_file(binary));
+    files.par_iter().for_each(|binary| check_file(binary));
     */
 }
