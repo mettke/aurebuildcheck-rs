@@ -11,7 +11,6 @@
 #![cfg_attr(feature = "cargo-clippy", warn(stutter))]
 //#![cfg_attr(feature = "cargo-clippy", warn(result_unwrap_used))]
 
-extern crate cargo;
 extern crate rayon;
 
 use std::fs::*;
@@ -53,15 +52,50 @@ fn check_file(path: &DirEntry) {
     }
 }
 
-fn main() {
-    let cargo_cfg = cargo::util::config::Config::default().unwrap();
-    let mut bin_dir = cargo_cfg.home().clone().into_path_unlocked();
-    bin_dir.push("bin");
-
-    let mut files = Vec::new();
-    for file in read_dir(&bin_dir).unwrap() {
-        files.push(file.unwrap());
+fn get_packages() -> Vec<String> {
+    let mut packages = Vec::new();
+    match Command::new("rpm").arg("-q").arg("-a").output() {
+        Ok(out) => {
+            let output = String::from_utf8_lossy(&out.stdout);
+            let output = output.into_owned();
+            for package in output.lines() {
+                packages.push(package.into());
+            }
+        }
+        Err(e) => panic!("ERROR '{}'", e),
     }
+    packages
+}
 
-    files.par_iter().for_each(|binary| check_file(binary));
+fn get_files(package: &str) -> Vec<String> {
+    let mut files = Vec::new();
+    match Command::new("rpm")
+        .arg("-q")
+        .arg("-l")
+        .arg(&package)
+        .output()
+    {
+        Ok(out) => {
+            let output = String::from_utf8_lossy(&out.stdout);
+            let output = output.into_owned();
+            for package in output.lines() {
+                files.push(package.into());
+            }
+        }
+        Err(e) => panic!("ERROR '{}'", e),
+    }
+    files
+}
+
+fn main() {
+    let list_of_packages = get_packages();
+
+    println!("{:?}", list_of_packages);
+    for pkg in list_of_packages {
+        let mut files = Vec::new();
+        files = get_files(&pkg);
+
+        println!("package: {}, files: {:?}", pkg, files);
+    }
+    //files.par_iter().for_each(|binary| check_file(binary));
 }
