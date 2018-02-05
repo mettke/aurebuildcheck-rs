@@ -20,10 +20,9 @@ use std::path::*;
 fn check_binary(filename: &str) {
     // todo: print package name here
     let mut print_string = String::new();
-    let name_string = filename;
-    print_string.push_str(&format!("checking: {}", &name_string));
+    //print_string.push_str(&format!("checking: {}", &packagename));
 
-    match Command::new("ldd").arg(&name_string).output() {
+    match Command::new("ldd").arg(&filename).output() {
         Ok(out) => {
             //    println!("git gc error\nstatus: {}", out.status);
             //    println!("stdout:\n {}", String::from_utf8_lossy(&out.stdout));
@@ -35,7 +34,7 @@ fn check_binary(filename: &str) {
             for line in output.lines() {
                 if line.ends_with("=> not found") {
                     if first {
-                        print_string.push_str(&format!("\nbinary: {}\n", &name_string));
+                        print_string.push_str(&format!("\n\tbinary: {}\n", &filename));
                     }
                     print_string.push_str(&format!(
                         "\t\t is missing: {}\n",
@@ -122,7 +121,7 @@ fn is_elf(file: &str) -> bool {
     file_output.len() > 2 && file_output[1] == "ELF" // ret bool
 }
 
-fn check_file(file: &str) {
+fn check_file(file: &str, pkgname: &str) {
     if !file_might_be_binary(file) || !is_elf(file) {
         return;
     }
@@ -131,10 +130,10 @@ fn check_file(file: &str) {
 
 fn main() {
     let list_of_packages = get_packages();
-
     for pkg in list_of_packages {
+        println!("Checking package: {}", pkg);
         let files = get_files(&pkg);
-        files.par_iter().for_each(|file| check_file(file));
+        files.par_iter().for_each(|file| check_file(file, &pkg));
     }
     /*
     for pkg in list_of_packages {
