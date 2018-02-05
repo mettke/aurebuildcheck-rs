@@ -129,7 +129,8 @@ fn check_file(file: &str) {
 }
 
 fn main() {
-    let list_of_packages = get_packages();
+    let mut list_of_packages = get_packages();
+    list_of_packages.sort();
     for pkg in list_of_packages {
         println!("Checking package: {}", pkg);
         let files = get_files(&pkg);
