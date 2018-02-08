@@ -1,5 +1,13 @@
+//! A program for checking ArchLinux packages for missing libraries.
+//!
+//! If a package is missing a library it may means, that is necessary to rebuild that given package.
+//! This binary checks every elf file in a package using either ldd or readelf and reports missing
+//! libraries.
+
 // enable additional rustc warnings
-#![warn(trivial_casts, trivial_numeric_casts, unsafe_code)]
+#![warn(anonymous_parameters, missing_debug_implementations, missing_docs, trivial_casts,
+        trivial_numeric_casts, unsafe_code, unstable_features, unused_extern_crates,
+        unused_import_braces, unused_qualifications, variant_size_differences)]
 // enable additional clippy warnings
 #![cfg_attr(feature = "cargo-clippy", warn(int_plus_one))]
 #![cfg_attr(feature = "cargo-clippy", warn(shadow_reuse, shadow_same, shadow_unrelated))]
@@ -9,123 +17,57 @@
 #![cfg_attr(feature = "cargo-clippy", warn(range_plus_one))]
 #![cfg_attr(feature = "cargo-clippy", warn(string_add, string_add_assign))]
 #![cfg_attr(feature = "cargo-clippy", warn(stutter))]
-//#![cfg_attr(feature = "cargo-clippy", warn(result_unwrap_used))]
+#![cfg_attr(feature = "cargo-clippy", warn(result_unwrap_used))]
 
+#[macro_use]
+extern crate clap;
+extern crate json;
 extern crate rayon;
 
-use std::process::Command;
-use rayon::prelude::*;
-use std::path::*;
+mod cli;
+mod cmd;
+mod data;
+mod process;
+mod output;
 
-fn check_binary(filename: &str) {
-    let mut print_string = String::new();
-
-    match Command::new("ldd").arg(&filename).output() {
-        Ok(out) => {
-            let output = String::from_utf8_lossy(&out.stdout);
-            let output = output.into_owned();
-            let mut first = true;
-            for line in output.lines() {
-                if line.ends_with("=> not found") {
-                    if first {
-                        print_string.push_str(&format!("\n\tbinary: {}\n", &filename));
-                    }
-                    print_string.push_str(&format!(
-                        "\t\t is missing: {}\n",
-                        line.replace("=> not found", "").trim()
-                    ));
-                    first = false;
-                }
-            }
-        }
-        Err(e) => panic!("ERROR '{}'", e),
-    }
-    if print_string.len() > 1 {
-        println!("{}", print_string.trim());
-    }
-}
-
-fn get_packages() -> Vec<String> {
-    let mut packages = Vec::new();
-    match Command::new("pacman").arg("-Qqm").output() {
-        Ok(out) => {
-            let output = String::from_utf8_lossy(&out.stdout);
-            let output = output.into_owned();
-            for package in output.lines() {
-                packages.push(package.into());
-            }
-        }
-        Err(e) => panic!("ERROR '{}'", e),
-    }
-    packages
-}
-
-fn get_files(package: &str) -> Vec<String> {
-    let mut files = Vec::new();
-    match Command::new("pacman")
-        .arg("-Qql")
-        .arg(&package)
-        .output()
-    {
-        Ok(out) => {
-            let output = String::from_utf8_lossy(&out.stdout);
-            let output = output.into_owned();
-            for package in output.lines() {
-                files.push(package.into());
-            }
-        }
-        Err(e) => panic!("ERROR '{}'", e),
-    }
-    files
-}
-
-fn file_might_be_binary(file: &str) -> bool {
-    let path = PathBuf::from(file);
-    if !path.is_file() {
-        return false;
-    }
-
-    let ext = file.split('.').last().unwrap();
-
-    match ext {
-        "a" | "png" | "la" | "ttf" | "gz" | "html" | "css" | "h" | "c" | "cxx" | "xml" | "rgb"
-        | "gif" | "wav" | "ogg" | "ogv" | "avi" | "opus" | "mp3" | "po" | "txt" | "jpg"
-        | "jpeg" | "bmp" | "xcf" | "mo" | "rb" | "py" | "lua" | "config" | "cfg" | "svg"
-        | "desktop" | "conf" | "pdf" | "xz" => false,
-        "" | "so" | _ => true,
-    }
-}
-
-fn is_elf(file: &str) -> bool {
-    // check if file is elf via "file"
-    let mut file_output: Vec<String> = Vec::new();
-    match Command::new("file").arg(&file).output() {
-        Ok(out) => {
-            let output = String::from_utf8_lossy(&out.stdout);
-            let output = output.into_owned();
-            for line in output.split(' ') {
-                file_output.push(line.into());
-            }
-        }
-        Err(e) => panic!("ERROR '{}'", e),
-    }
-
-    file_output.len() > 2 && file_output[1] == "ELF" // ret bool
-}
-
-fn check_file(file: &str) {
-    if !file_might_be_binary(file) || !is_elf(file) {
-        return;
-    }
-    check_binary(file);
-}
+use cli::Command;
+use data::Error;
+use std::process::exit;
 
 fn main() {
-    let mut list_of_packages = get_packages();
-    list_of_packages.sort();
-    for pkg in list_of_packages {
-        println!("Checking package: {}", pkg);
-        let files = get_files(&pkg);
-        files.par_iter().for_each(|file| check_file(file));
+    let mut settings = cli::get_command_line_settings();
+    handle_error(cmd::check_required_programs(&settings), 1);
+
+    // TODO: Implement readelf and remove following lines
+    match settings.command {
+        Command::Readelf => {
+            println!("readelf is currently not supported but will be added shortly");
+            exit(10);
+        }
+        _ => {}
+    }
+
+    if settings.all_packages {
+        handle_error(cmd::get_all_packages(&mut settings), 2);
+    }
+    let packages = handle_error(process::verify_packages(&settings), 3);
+    output::print_packages(&packages, &settings);
+    exit(0);
+}
+
+/// Error Handling for the main method. Takes a result and either
+/// prints the error message or returns the value.
+///
+/// # Arguments
+///
+/// * `result` - Result to process
+/// * `error_code` - Error Code to exit with
+fn handle_error<T>(result: Result<T, Error>, error_code: i32) -> T {
+    match result {
+        Err(e) => {
+            println!("{}", e);
+            exit(error_code);
+        }
+        Ok(element) => return element,
     }
 }

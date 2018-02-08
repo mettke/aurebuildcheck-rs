@@ -1,0 +1,3 @@
+# aurebuildcheck-rs
+
+aurebuildcheck
