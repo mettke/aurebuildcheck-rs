@@ -5,3 +5,7 @@ authors = ["Matthias Krüger <matthias.krueger@famsik.de>"]
 
 [dependencies]
 rayon = "0.9" # parallelize
+
+[profile.release]
+lto=true
+codegen-units=1
