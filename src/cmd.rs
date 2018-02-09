@@ -66,27 +66,27 @@ pub fn verify_files_via_ldd<'a>(file: &str) -> Result<Option<FileDependency>, Er
     // TODO: ldd prints warnings - should be included in verbose output
     let output = String::from_utf8_lossy(&out.stdout);
     for line in output.lines() {
-        if line.ends_with("=> not found") {
+        if line.ends_with(" => not found") {
             let mut library_name = String::from(line.trim());
-            let new_length = library_name.len() - 13;
+            let new_length = library_name.len() - " => not found".len();
             library_name.truncate(new_length);
             dependency.library_dependencies.insert(library_name);
         }
     }
-    if dependency.library_dependencies.len() > 0 {
-        Ok(Some(dependency))
-    } else {
+    if dependency.library_dependencies.is_empty() {
         Ok(None)
+    } else {
+        Ok(Some(dependency))        
     }
 }
 
 pub fn verify_files_via_readelf<'a>(file: &str) -> Result<Option<FileDependency>, Error<'a>> {
     let mut dependency = FileDependency::default();
     dependency.file_name = String::from(file);
-    if dependency.library_dependencies.len() > 0 {
-        Ok(Some(dependency))
-    } else {
+    if dependency.library_dependencies.is_empty() {
         Ok(None)
+    } else {
+        Ok(Some(dependency))        
     }
 }
 

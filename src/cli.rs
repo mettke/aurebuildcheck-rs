@@ -203,12 +203,12 @@ Requires pkgfile",
         .arg(
             Arg::with_name("group by library")
                 .long("group_by_library")
-                .help("groups output by librarires required in files"),
+                .help("groups output by libraries required in files"),
         )
         .arg(
             Arg::with_name("group by containing package")
                 .long("group_by_containing_package")
-                .help("groups output by packages containg libraries"),
+                .help("groups output by packages containing libraries"),
         )
         .get_matches()
 }
