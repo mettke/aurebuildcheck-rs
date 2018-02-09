@@ -7,6 +7,13 @@ pub enum Command {
     Readelf,
 }
 
+// Specifies the various ways to output the missing library information
+#[derive(Debug)]
+pub enum Output {
+    Console,
+    JSON,
+}
+
 /// These Settings define how the program operates and are used everywhere
 #[derive(Debug)]
 pub struct CommandLineSettings {
@@ -15,7 +22,7 @@ pub struct CommandLineSettings {
     pub all_packages: bool,
     pub ignore_libraries: Vec<String>,
     pub show_candidates: bool,
-    pub output_json: bool,
+    pub output: Output,
     pub quite: bool,
     pub group_by_file: bool,
     pub group_by_library: bool,
@@ -30,7 +37,7 @@ impl Default for CommandLineSettings {
             all_packages: false,
             ignore_libraries: vec![],
             show_candidates: false,
-            output_json: false,
+            output: Output::Console,
             quite: false,
             group_by_file: false,
             group_by_library: false,
@@ -56,7 +63,7 @@ pub fn get_command_line_settings() -> CommandLineSettings {
         settings.show_candidates = true;
     }
     if parser.is_present("output json") {
-        settings.output_json = true;
+        settings.output = Output::JSON;
     }
     if parser.is_present("quite") {
         settings.quite = true;
@@ -84,7 +91,7 @@ pub fn get_command_line_settings() -> CommandLineSettings {
     settings
 }
 
-fn get_subcommand_line_settings<'a>(parser: &ArgMatches<'a>, settings: &mut CommandLineSettings) {
+fn get_subcommand_line_settings(parser: &ArgMatches, settings: &mut CommandLineSettings) {
     if let Some(packages) = parser.values_of_lossy("packages") {
         settings.packages = packages;
     }
@@ -180,6 +187,7 @@ Requires pkgfile",
                 .help("Uses json for the list of missing libraries"),
         )
         .arg(
+            // TODO: Replace with verbose
             Arg::with_name("quite")
                 .short("q")
                 .long("quite")

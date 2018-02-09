@@ -50,6 +50,28 @@ fn main() {
     if settings.all_packages {
         handle_error(cmd::get_all_packages(&mut settings), 2);
     }
+    // TODO: Replace with verbose
+    // TODO: Print more information with verbose like the file types which are checked
+    if !settings.quite {
+        print!("Checking Packages: ");
+        for (index, package) in settings.packages.iter().enumerate() {
+            if index != 0 {
+                print!(", ");
+            }
+            print!("{}", package);
+        }
+        println!("");
+
+        print!("Ignoring Libraries: ");
+        for (index, package) in settings.ignore_libraries.iter().enumerate() {
+            if index != 0 {
+                print!(", ");
+            }
+            print!("{}", package);
+        }
+        println!("");
+    }
+
     let packages = handle_error(process::verify_packages(&settings), 3);
     output::print_packages(&packages, &settings);
     exit(0);

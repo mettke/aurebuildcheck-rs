@@ -5,7 +5,7 @@ use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-pub fn verify_packages<'a>(settings: &CommandLineSettings) -> Result<Vec<Package>, Error> {
+pub fn verify_packages(settings: &CommandLineSettings) -> Result<Vec<Package>, Error> {
     let mut packages = settings
         .packages
         .iter()
@@ -31,7 +31,7 @@ fn verify_package<'a>(
     package.file_dependencies = files
         .par_iter()
         // verify files parallel - will stop if error occures
-        .map(|file| verify_file(file, settings, &filenames))
+        .map(|file| verify_file(file, settings))
         // collect and abort if error
         .collect::<Result<Vec<Option<FileDependency>>, Error>>()?
         .into_iter()
@@ -39,6 +39,7 @@ fn verify_package<'a>(
         .filter_map(|element| element)
         .collect::<Vec<FileDependency>>();
 
+    remove_ignored_or_packaged_libraries(package, filenames, settings);
     setup_library_requirements(package)?;
     if settings.show_candidates {
         setup_packages_containing(package)?;
@@ -63,12 +64,11 @@ fn get_filenames_from_files(files: &Vec<String>) -> Vec<String> {
 fn verify_file<'a>(
     file: &str,
     settings: &CommandLineSettings,
-    filenames: &Vec<String>,
 ) -> Result<Option<FileDependency>, Error<'a>> {
     if file_might_be_binary(file) && cmd::file_is_elf(file)? {
         let dependency = match settings.command {
-            Command::Ldd => cmd::verify_files_via_ldd(file, settings, &filenames),
-            Command::Readelf => cmd::verify_files_via_readelf(file, settings, &filenames),
+            Command::Ldd => cmd::verify_files_via_ldd(file),
+            Command::Readelf => cmd::verify_files_via_readelf(file),
         }?;
         return Ok(dependency);
     }
@@ -92,6 +92,27 @@ fn file_might_be_binary(file: &str) -> bool {
         }
     }
     true
+}
+
+fn remove_ignored_or_packaged_libraries<'a>(
+    package: &mut Package,
+    filenames: Vec<String>,
+    settings: &CommandLineSettings,
+) {
+    package
+        .file_dependencies
+        .iter_mut()
+        .for_each(|file_dependency| {
+            file_dependency
+                .library_dependencies
+                .retain(|library_dependency| {
+                    !settings.ignore_libraries.contains(library_dependency)
+                        && !filenames.contains(library_dependency)
+                });
+        });
+    package
+        .file_dependencies
+        .retain(|file_dependency| file_dependency.library_dependencies.len() > 0);
 }
 
 fn setup_library_requirements<'a>(package: &mut Package) -> Result<(), Error<'a>> {

@@ -1,10 +1,12 @@
 use std::{error, fmt, io};
 use std::cmp::Ordering;
+use std::collections::HashSet;
 
 #[derive(Debug)]
 pub enum Error<'a> {
     Dependency(&'a str),
     Execution(io::Error),
+    ExecutionError(String),
 }
 
 impl<'a> fmt::Display for Error<'a> {
@@ -12,6 +14,7 @@ impl<'a> fmt::Display for Error<'a> {
         match *self {
             Error::Dependency(ref dep) => write!(f, "Dependency missing: {}", dep),
             Error::Execution(ref err) => write!(f, "Command execution error: {}", err),
+            Error::ExecutionError(ref err) => write!(f, "Command execution error: {:#?}", err),
         }
     }
 }
@@ -23,6 +26,7 @@ impl<'a> error::Error for Error<'a> {
                 "Dependency is missing and must be installed before running this command"
             }
             Error::Execution(ref err) => err.description(),
+            Error::ExecutionError(_) => "Execution of program failed with non zero",
         }
     }
 
@@ -30,6 +34,7 @@ impl<'a> error::Error for Error<'a> {
         match *self {
             Error::Dependency(_) => None,
             Error::Execution(ref err) => Some(err),
+            Error::ExecutionError(_) => None,
         }
     }
 }
@@ -85,7 +90,7 @@ impl PartialEq for Package {
 #[derive(Debug, Default)]
 pub struct FileDependency {
     pub file_name: String,
-    pub library_dependencies: Vec<String>,
+    pub library_dependencies: HashSet<String>,
 }
 
 #[derive(Debug, Default)]
