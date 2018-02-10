@@ -5,9 +5,9 @@ use std::process::{Command, Output};
 pub fn check_required_programs(settings: &cli::CommandLineSettings) -> Result<(), Error> {
     check_required_program("pacman")?;
     check_required_program("file")?;
-    match &settings.command {
-        &cli::Command::Ldd => check_required_program("ldd")?,
-        &cli::Command::Readelf => check_required_program("readelf")?,
+    match settings.command {
+        cli::Command::Ldd => check_required_program("ldd")?,
+        cli::Command::Readelf => check_required_program("readelf")?,
     }
     if settings.show_candidates {
         check_required_program("pkgfile")?;
@@ -15,7 +15,7 @@ pub fn check_required_programs(settings: &cli::CommandLineSettings) -> Result<()
     Ok(())
 }
 
-fn check_required_program<'a>(program: &'a str) -> Result<(), Error<'a>> {
+fn check_required_program(program: &str) -> Result<(), Error> {
     match execute_command(Command::new("which").arg(program)) {
         Err(_) => Err(Error::Dependency(program)),
         _ => Ok(()),
@@ -43,7 +43,7 @@ pub fn get_all_packages(settings: &mut cli::CommandLineSettings) -> Result<(), E
     Ok(())
 }
 
-pub fn get_files_for_package<'a>(package_name: &String) -> Result<Vec<String>, Error<'a>> {
+pub fn get_files_for_package<'a>(package_name: &str) -> Result<Vec<String>, Error<'a>> {
     let mut files = Vec::new();
     let out = execute_command(Command::new("pacman").arg("-Qql").arg(package_name))?;
     let output = String::from_utf8_lossy(&out.stdout);

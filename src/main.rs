@@ -1,4 +1,4 @@
-//! A program for checking ArchLinux packages for missing libraries.
+//! A program for checking `ArchLinux` packages for missing libraries.
 //!
 //! If a package is missing a library it may mean, that is necessary to rebuild that given package.
 //! This binary checks every elf file in a package using either ldd or readelf and reports missing
@@ -17,7 +17,7 @@
 #![cfg_attr(feature = "cargo-clippy", warn(range_plus_one))]
 #![cfg_attr(feature = "cargo-clippy", warn(string_add, string_add_assign))]
 #![cfg_attr(feature = "cargo-clippy", warn(stutter))]
-#![cfg_attr(feature = "cargo-clippy", warn(result_unwrap_used))]
+//#![cfg_attr(feature = "cargo-clippy", warn(result_unwrap_used))]
 
 #[macro_use]
 extern crate clap;
@@ -40,12 +40,9 @@ fn main() {
     handle_error(cmd::check_required_programs(&settings), 3);
 
     // TODO: Implement readelf and remove following lines
-    match settings.command {
-        Command::Readelf => {
-            println!("readelf is currently not supported but will be added shortly");
-            exit(10);
-        }
-        _ => {}
+    if let Command::Readelf = settings.command {
+        println!("readelf is currently not supported but will be added shortly");
+        exit(10);
     }
 
     if settings.all_packages {
@@ -61,17 +58,18 @@ fn main() {
             }
             print!("{}", package);
         }
-        println!("");
+        println!();
     }
 
     let packages = handle_error(process::verify_packages(&settings), 5);
     output::print_packages(&packages, &settings);
-    match packages
+    if packages
         .iter()
         .any(|package| !package.file_dependencies.is_empty())
     {
-        true => exit(1),
-        false => exit(0),
+        exit(1)
+    } else {
+        exit(0)
     }
 }
 
@@ -88,6 +86,6 @@ fn handle_error<T>(result: Result<T, Error>, error_code: i32) -> T {
             println!("{}", e);
             exit(error_code);
         }
-        Ok(element) => return element,
+        Ok(element) => element,
     }
 }
