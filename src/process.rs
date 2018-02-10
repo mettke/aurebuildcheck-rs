@@ -1,29 +1,31 @@
 use cli::{Command, CommandLineSettings};
 use cmd;
-use data::{Error, LibraryRequired, Package, PackagesContaining,
-           ProcessingFileDependency, ProcessingPackage};
+use data::{Error, LibraryRequired, Package, PackagesContaining, ProcessingFileDependency,
+           ProcessingPackage};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 pub fn verify_packages(settings: &CommandLineSettings) -> Result<Vec<Package>, Error> {
-    let mut packages = settings.packages
+    let mut packages = settings
+        .packages
         .par_iter()
         .map(|package| verify_package(package, settings))
         .collect::<Result<Vec<ProcessingPackage>, Error>>()?
         .into_iter()
-        .map(|package| {
-            package.into()
-        })
+        .map(|package| package.into())
         .collect::<Vec<Package>>();
- 
-    packages.iter_mut().map(|mut package| {
-        setup_library_requirements(&mut package)?;
-        if settings.show_candidates {
-            setup_packages_containing(&mut package)?;
-        }
-        Ok(())
-    }).collect::<Result<Vec<_>, Error>>()?;
+
+    packages
+        .iter_mut()
+        .map(|mut package| {
+            setup_library_requirements(&mut package)?;
+            if settings.show_candidates {
+                setup_packages_containing(&mut package)?;
+            }
+            Ok(())
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
 
     Ok(packages)
 }

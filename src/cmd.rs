@@ -71,9 +71,7 @@ pub fn verify_files_via_ldd<'a>(file: &str) -> Result<Option<ProcessingFileDepen
             let mut library_name = String::from(line.trim());
             let new_length = library_name.len() - " => not found".len();
             library_name.truncate(new_length);
-            dependency
-                .library_dependencies
-                .insert(library_name);
+            dependency.library_dependencies.insert(library_name);
         }
     }
     if dependency.library_dependencies.is_empty() {
@@ -83,7 +81,9 @@ pub fn verify_files_via_ldd<'a>(file: &str) -> Result<Option<ProcessingFileDepen
     }
 }
 
-pub fn verify_files_via_readelf<'a>(file: &str) -> Result<Option<ProcessingFileDependency>, Error<'a>> {
+pub fn verify_files_via_readelf<'a>(
+    file: &str,
+) -> Result<Option<ProcessingFileDependency>, Error<'a>> {
     let mut dependency = ProcessingFileDependency::default();
     dependency.file_name = String::from(file);
     if dependency.library_dependencies.is_empty() {
