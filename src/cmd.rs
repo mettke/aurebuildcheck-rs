@@ -76,7 +76,7 @@ pub fn verify_files_via_ldd<'a>(file: &str) -> Result<Option<FileDependency>, Er
     if dependency.library_dependencies.is_empty() {
         Ok(None)
     } else {
-        Ok(Some(dependency))        
+        Ok(Some(dependency))
     }
 }
 
@@ -86,7 +86,7 @@ pub fn verify_files_via_readelf<'a>(file: &str) -> Result<Option<FileDependency>
     if dependency.library_dependencies.is_empty() {
         Ok(None)
     } else {
-        Ok(Some(dependency))        
+        Ok(Some(dependency))
     }
 }
 

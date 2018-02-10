@@ -1,4 +1,6 @@
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
+use data::Error;
+use regex::RegexSet;
 
 /// Specifies the various ways to check elf files for missing libraries
 #[derive(Debug)]
@@ -21,6 +23,7 @@ pub struct CommandLineSettings {
     pub packages: Vec<String>,
     pub all_packages: bool,
     pub ignore_libraries: Vec<String>,
+    pub ignore_libraries_regex: Option<RegexSet>,
     pub show_candidates: bool,
     pub output: Output,
     pub quite: bool,
@@ -36,6 +39,7 @@ impl Default for CommandLineSettings {
             packages: vec![],
             all_packages: false,
             ignore_libraries: vec![],
+            ignore_libraries_regex: None,
             show_candidates: false,
             output: Output::Console,
             quite: false,
@@ -46,17 +50,17 @@ impl Default for CommandLineSettings {
     }
 }
 
-pub fn get_command_line_settings() -> CommandLineSettings {
+pub fn get_command_line_settings<'a>() -> Result<CommandLineSettings, Error<'a>> {
     let mut settings = CommandLineSettings::default();
     let parser = setup_command_line_parser();
 
     if let Some(subcommand) = parser.subcommand_matches("ldd") {
         settings.command = Command::Ldd;
-        get_subcommand_line_settings(subcommand, &mut settings);
+        get_subcommand_line_settings(subcommand, &mut settings)?;
     }
     if let Some(subcommand) = parser.subcommand_matches("readelf") {
         settings.command = Command::Readelf;
-        get_subcommand_line_settings(subcommand, &mut settings);
+        get_subcommand_line_settings(subcommand, &mut settings)?;
     }
 
     if parser.is_present("show candidates") {
@@ -88,10 +92,13 @@ pub fn get_command_line_settings() -> CommandLineSettings {
         settings.group_by_library = true;
         settings.group_by_containing_package = settings.show_candidates;
     }
-    settings
+    Ok(settings)
 }
 
-fn get_subcommand_line_settings(parser: &ArgMatches, settings: &mut CommandLineSettings) {
+fn get_subcommand_line_settings<'a>(
+    parser: &ArgMatches,
+    settings: &mut CommandLineSettings,
+) -> Result<(), Error<'a>> {
     if let Some(packages) = parser.values_of_lossy("packages") {
         settings.packages = packages;
     }
@@ -100,7 +107,29 @@ fn get_subcommand_line_settings(parser: &ArgMatches, settings: &mut CommandLineS
     }
     if let Some(ignore_libraries) = parser.values_of_lossy("ignore libraries") {
         settings.ignore_libraries = ignore_libraries;
+        if !settings.quite {
+            print!("Ignoring Libraries: ");
+            for (index, package) in settings.ignore_libraries.iter().enumerate() {
+                if index != 0 {
+                    print!(", ");
+                }
+                print!("{}", package);
+            }
+            println!("");
+        }
     }
+    if let Some(ignore_libraries_regex) = parser.values_of_lossy("ignore libraries via regex") {
+        print!("Ignoring Libraries via Regex: ");
+        for (index, package) in ignore_libraries_regex.iter().enumerate() {
+            if index != 0 {
+                print!(", ");
+            }
+            print!("{}", package);
+        }
+        println!("");
+        settings.ignore_libraries_regex = Some(RegexSet::new(ignore_libraries_regex)?);
+    }
+    Ok(())
 }
 
 fn setup_command_line_parser<'a>() -> ArgMatches<'a> {
@@ -136,6 +165,22 @@ fn setup_command_line_parser<'a>() -> ArgMatches<'a> {
                         .use_delimiter(true)
                         .number_of_values(1)
                         .help("List of libraries to ignore (eg lib1,lib2)"),
+                )
+                .arg(
+                    Arg::with_name("ignore libraries via regex")
+                        .short("r")
+                        .long("ignore_libs_regex")
+                        .multiple(true)
+                        .use_delimiter(true)
+                        .number_of_values(1)
+                        .help("List of libraries to ignore (eg lib1,lib2) via regex")
+                        .long_help(
+                            "
+List of libraries to ignore (eg lib1,lib2) via regex.
+More information about how to define regex at
+https://docs.rs/regex/#syntax
+                        ",
+                        ),
                 ),
         )
         .subcommand(
@@ -165,6 +210,22 @@ fn setup_command_line_parser<'a>() -> ArgMatches<'a> {
                         .use_delimiter(true)
                         .number_of_values(1)
                         .help("List of libraries to ignore (eg lib1,lib2)"),
+                )
+                .arg(
+                    Arg::with_name("ignore libraries via regex")
+                        .short("r")
+                        .long("ignore_libs_regex")
+                        .multiple(true)
+                        .use_delimiter(true)
+                        .number_of_values(1)
+                        .help("List of libraries to ignore (eg lib1,lib2) via regex")
+                        .long_help(
+                            "
+List of libraries to ignore (eg lib1,lib2) via regex.
+More information about how to define regex at
+https://docs.rs/regex/#syntax
+                        ",
+                        ),
                 ),
         )
         .arg(

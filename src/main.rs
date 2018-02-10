@@ -23,6 +23,7 @@
 extern crate clap;
 extern crate json;
 extern crate rayon;
+extern crate regex;
 
 mod cli;
 mod cmd;
@@ -35,8 +36,8 @@ use data::Error;
 use std::process::exit;
 
 fn main() {
-    let mut settings = cli::get_command_line_settings();
-    handle_error(cmd::check_required_programs(&settings), 2);
+    let mut settings = handle_error(cli::get_command_line_settings(), 2);
+    handle_error(cmd::check_required_programs(&settings), 3);
 
     // TODO: Implement readelf and remove following lines
     match settings.command {
@@ -48,7 +49,7 @@ fn main() {
     }
 
     if settings.all_packages {
-        handle_error(cmd::get_all_packages(&mut settings), 3);
+        handle_error(cmd::get_all_packages(&mut settings), 4);
     }
     // TODO: Replace with verbose
     // TODO: Print more information with verbose like the file types which are checked
@@ -61,24 +62,16 @@ fn main() {
             print!("{}", package);
         }
         println!("");
-
-        print!("Ignoring Libraries: ");
-        for (index, package) in settings.ignore_libraries.iter().enumerate() {
-            if index != 0 {
-                print!(", ");
-            }
-            print!("{}", package);
-        }
-        println!("");
     }
 
-    let packages = handle_error(process::verify_packages(&settings), 4);
+    let packages = handle_error(process::verify_packages(&settings), 5);
     output::print_packages(&packages, &settings);
-    match packages.iter().any(|package| {
-        !package.file_dependencies.is_empty()
-    }) {
+    match packages
+        .iter()
+        .any(|package| !package.file_dependencies.is_empty())
+    {
         true => exit(1),
-        false => exit(0)
+        false => exit(0),
     }
 }
 

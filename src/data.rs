@@ -1,3 +1,4 @@
+use regex;
 use std::{error, fmt, io};
 use std::cmp::Ordering;
 use std::collections::HashSet;
@@ -7,6 +8,7 @@ pub enum Error<'a> {
     Dependency(&'a str),
     Execution(io::Error),
     ExecutionError(String),
+    RegexError(regex::Error),
 }
 
 impl<'a> fmt::Display for Error<'a> {
@@ -15,6 +17,7 @@ impl<'a> fmt::Display for Error<'a> {
             Error::Dependency(ref dep) => write!(f, "Dependency missing: {}", dep),
             Error::Execution(ref err) => write!(f, "Command execution error: {}", err),
             Error::ExecutionError(ref err) => write!(f, "Command execution error: {:#?}", err),
+            Error::RegexError(ref err) => write!(f, "Regex Error: {:#?}", err),
         }
     }
 }
@@ -27,6 +30,7 @@ impl<'a> error::Error for Error<'a> {
             }
             Error::Execution(ref err) => err.description(),
             Error::ExecutionError(_) => "Execution of program failed with non zero",
+            Error::RegexError(ref err) => err.description(),
         }
     }
 
@@ -35,6 +39,7 @@ impl<'a> error::Error for Error<'a> {
             Error::Dependency(_) => None,
             Error::Execution(ref err) => Some(err),
             Error::ExecutionError(_) => None,
+            Error::RegexError(ref err) => Some(err),
         }
     }
 }
@@ -42,6 +47,12 @@ impl<'a> error::Error for Error<'a> {
 impl<'a> From<io::Error> for Error<'a> {
     fn from(err: io::Error) -> Self {
         Error::Execution(err)
+    }
+}
+
+impl<'a> From<regex::Error> for Error<'a> {
+    fn from(err: regex::Error) -> Self {
+        Error::RegexError(err)
     }
 }
 

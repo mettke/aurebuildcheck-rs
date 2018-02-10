@@ -108,6 +108,9 @@ fn remove_ignored_or_packaged_libraries<'a>(
                 .retain(|library_dependency| {
                     !settings.ignore_libraries.contains(library_dependency)
                         && !filenames.contains(library_dependency)
+                        && !settings.ignore_libraries_regex.iter().fold(false, |_, ignore_libraries_regex| {
+                            ignore_libraries_regex.is_match(library_dependency)
+                        })
                 });
         });
     package
