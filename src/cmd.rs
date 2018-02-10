@@ -1,5 +1,5 @@
 use cli;
-use data::{Error, FileDependency, Package};
+use data::{Error, ProcessingFileDependency};
 use std::process::{Command, Output};
 
 pub fn check_required_programs(settings: &cli::CommandLineSettings) -> Result<(), Error> {
@@ -39,12 +39,13 @@ pub fn get_all_packages(settings: &mut cli::CommandLineSettings) -> Result<(), E
     for package in output.lines() {
         settings.packages.push(package.into());
     }
+    settings.packages.sort();
     Ok(())
 }
 
-pub fn get_files_for_package<'a>(package: &Package) -> Result<Vec<String>, Error<'a>> {
+pub fn get_files_for_package<'a>(package_name: &String) -> Result<Vec<String>, Error<'a>> {
     let mut files = Vec::new();
-    let out = execute_command(Command::new("pacman").arg("-Qql").arg(&package.name))?;
+    let out = execute_command(Command::new("pacman").arg("-Qql").arg(package_name))?;
     let output = String::from_utf8_lossy(&out.stdout);
     let output = output.into_owned();
     for file in output.lines() {
@@ -59,8 +60,8 @@ pub fn file_is_elf<'a>(file: &str) -> Result<bool, Error<'a>> {
     Ok(output.contains("ELF"))
 }
 
-pub fn verify_files_via_ldd<'a>(file: &str) -> Result<Option<FileDependency>, Error<'a>> {
-    let mut dependency = FileDependency::default();
+pub fn verify_files_via_ldd<'a>(file: &str) -> Result<Option<ProcessingFileDependency>, Error<'a>> {
+    let mut dependency = ProcessingFileDependency::default();
     dependency.file_name = String::from(file);
     let out = Command::new("ldd").arg(&file).output()?;
     // TODO: ldd prints warnings - should be included in verbose output
@@ -70,7 +71,9 @@ pub fn verify_files_via_ldd<'a>(file: &str) -> Result<Option<FileDependency>, Er
             let mut library_name = String::from(line.trim());
             let new_length = library_name.len() - " => not found".len();
             library_name.truncate(new_length);
-            dependency.library_dependencies.insert(library_name);
+            dependency
+                .library_dependencies
+                .insert(library_name);
         }
     }
     if dependency.library_dependencies.is_empty() {
@@ -80,8 +83,8 @@ pub fn verify_files_via_ldd<'a>(file: &str) -> Result<Option<FileDependency>, Er
     }
 }
 
-pub fn verify_files_via_readelf<'a>(file: &str) -> Result<Option<FileDependency>, Error<'a>> {
-    let mut dependency = FileDependency::default();
+pub fn verify_files_via_readelf<'a>(file: &str) -> Result<Option<ProcessingFileDependency>, Error<'a>> {
+    let mut dependency = ProcessingFileDependency::default();
     dependency.file_name = String::from(file);
     if dependency.library_dependencies.is_empty() {
         Ok(None)

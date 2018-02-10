@@ -1,7 +1,8 @@
 use regex;
 use std::{error, fmt, io};
-use std::cmp::Ordering;
 use std::collections::HashSet;
+use std::iter::FromIterator;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub enum Error<'a> {
@@ -57,61 +58,77 @@ impl<'a> From<regex::Error> for Error<'a> {
 }
 
 #[derive(Debug)]
+pub struct ProcessingPackage {
+    pub name: String,
+    pub file_dependencies: Vec<ProcessingFileDependency>,
+}
+
+impl ProcessingPackage {
+    pub fn new<S: Into<String>>(name: S) -> Self {
+        ProcessingPackage {
+            name: name.into(),
+            file_dependencies: vec![],
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct ProcessingFileDependency {
+    pub file_name: String,
+    pub library_dependencies: HashSet<String>,
+}
+
+#[derive(Debug)]
 pub struct Package {
     pub name: String,
-    //#[serde(skip_serializing_if = "path")]
     pub file_dependencies: Vec<FileDependency>,
-    //#[serde(skip_serializing_if = "path")]
     pub library_requirements: Vec<LibraryRequired>,
-    // #[serde(skip_serializing_if = "path")]
     pub packages_containing: Vec<PackagesContaining>,
 }
 
-impl Package {
-    pub fn new<S: Into<String>>(name: S) -> Self {
+impl From<ProcessingPackage> for Package {
+    fn from(package: ProcessingPackage) -> Self {
         Package {
-            name: name.into(),
-            file_dependencies: vec![],
+            name: package.name,
+            file_dependencies: package
+                .file_dependencies
+                .into_iter()
+                .map(|dependency| dependency.into())
+                .collect(),
             library_requirements: vec![],
             packages_containing: vec![],
         }
     }
 }
 
-impl Ord for Package {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.name.cmp(&other.name)
-    }
-}
-
-impl PartialOrd for Package {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Eq for Package {}
-
-impl PartialEq for Package {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-    }
-}
-
 #[derive(Debug, Default)]
 pub struct FileDependency {
-    pub file_name: String,
-    pub library_dependencies: HashSet<String>,
+    pub file_name: Rc<String>,
+    pub library_dependencies: HashSet<Rc<String>>,
+}
+
+impl From<ProcessingFileDependency> for FileDependency {
+    fn from(dependency: ProcessingFileDependency) -> Self {
+        FileDependency {
+            file_name: Rc::new(dependency.file_name),
+            library_dependencies: HashSet::from_iter(
+                dependency
+                    .library_dependencies
+                    .into_iter()
+                    .map(|entry| Rc::new(entry)),
+            ),
+        }
+    }
 }
 
 #[derive(Debug, Default)]
 pub struct LibraryRequired {
-    pub library_name: String,
-    pub files_requiring: Vec<String>,
+    pub library_name: Rc<String>,
+    pub files_requiring: Vec<Rc<String>>,
 }
 
 #[derive(Debug, Default)]
 pub struct PackagesContaining {
-    pub library_name: String,
+    pub library_name: Rc<String>,
     pub packages_containing: Vec<String>,
 }

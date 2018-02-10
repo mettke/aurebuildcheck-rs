@@ -76,10 +76,12 @@ fn print_json_file_dependencies(package: &Package) -> json::JsonValue {
     let mut json_file_dependencies = json::JsonValue::new_array();
     package.file_dependencies.iter().for_each(|dependency| {
         let mut json_file_dependency = json::JsonValue::new_object();
-        json_file_dependency["file_name"] = dependency.file_name.clone().into();
+        json_file_dependency["file_name"] = (*dependency.file_name).clone().into();
         let mut json_file_dependencies_array = json::JsonValue::new_array();
         dependency.library_dependencies.iter().for_each(|library| {
-            json_file_dependencies_array.push(library.clone()).unwrap();
+            json_file_dependencies_array
+                .push((**library).clone())
+                .unwrap();
         });
         json_file_dependency["library_dependencies"] = json_file_dependencies_array;
         json_file_dependencies.push(json_file_dependency).unwrap();
@@ -91,10 +93,10 @@ fn print_json_library_requirements(package: &Package) -> json::JsonValue {
     let mut json_library_requirements = json::JsonValue::new_array();
     package.library_requirements.iter().for_each(|library| {
         let mut json_library_requirement = json::JsonValue::new_object();
-        json_library_requirement["library_name"] = library.library_name.clone().into();
+        json_library_requirement["library_name"] = (*library.library_name).clone().into();
         let mut json_library_requirements_array = json::JsonValue::new_array();
         library.files_requiring.iter().for_each(|file| {
-            json_library_requirements_array.push(file.clone()).unwrap();
+            json_library_requirements_array.push((**file).clone()).unwrap();
         });
         json_library_requirement["files_requiring"] = json_library_requirements_array;
         json_library_requirements
@@ -111,7 +113,7 @@ fn print_json_packages_containing(package: &Package) -> json::JsonValue {
         .iter()
         .for_each(|package_entry| {
             let mut json_package_containing = json::JsonValue::new_object();
-            json_package_containing["library_name"] = package_entry.library_name.clone().into();
+            json_package_containing["library_name"] = (*package_entry.library_name).clone().into();
             let mut json_packages_containing_array = json::JsonValue::new_array();
             package_entry
                 .packages_containing

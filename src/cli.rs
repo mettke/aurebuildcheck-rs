@@ -101,6 +101,7 @@ fn get_subcommand_line_settings<'a>(
 ) -> Result<(), Error<'a>> {
     if let Some(packages) = parser.values_of_lossy("packages") {
         settings.packages = packages;
+        settings.packages.sort();
     }
     if parser.is_present("all packages") {
         settings.all_packages = true;
