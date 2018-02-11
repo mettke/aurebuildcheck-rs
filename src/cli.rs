@@ -116,7 +116,7 @@ fn get_subcommand_line_settings<'a>(
                 }
                 print!("{}", package);
             }
-            println!("");
+            println!();
         }
     }
     if let Some(ignore_libraries_regex) = parser.values_of_lossy("ignore libraries via regex") {
@@ -127,7 +127,7 @@ fn get_subcommand_line_settings<'a>(
             }
             print!("{}", package);
         }
-        println!("");
+        println!();
         settings.ignore_libraries_regex = Some(RegexSet::new(ignore_libraries_regex)?);
     }
     Ok(())
@@ -235,10 +235,10 @@ https://docs.rs/regex/#syntax
                 .long("show_candidates")
                 .help("Prints a list of packages containing the missing library")
                 .long_help(
-                    "Prints a list of packages containing the missing library. 
-The listed packages may or may not add the library to the 
-system path. Therefore just because a package is listed 
-doesn't mean it will satisfy the library requirement. 
+                    "Prints a list of packages containing the missing library.
+The listed packages may or may not add the library to the
+system path. Therefore just because a package is listed
+doesn't mean it will satisfy the library requirement.
 Requires pkgfile",
                 ),
         )

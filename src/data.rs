@@ -15,7 +15,7 @@ pub enum Error<'a> {
 impl<'a> fmt::Display for Error<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Error::Dependency(ref dep) => write!(f, "Dependency missing: {}", dep),
+            Error::Dependency(dep) => write!(f, "Dependency missing: {}", dep),
             Error::Execution(ref err) => write!(f, "Command execution error: {}", err),
             Error::ExecutionError(ref err) => write!(f, "Command execution error: {:#?}", err),
             Error::RegexError(ref err) => write!(f, "Regex Error: {:#?}", err),
@@ -37,9 +37,8 @@ impl<'a> error::Error for Error<'a> {
 
     fn cause(&self) -> Option<&error::Error> {
         match *self {
-            Error::Dependency(_) => None,
+            Error::Dependency(_) | Error::ExecutionError(_) => None,
             Error::Execution(ref err) => Some(err),
-            Error::ExecutionError(_) => None,
             Error::RegexError(ref err) => Some(err),
         }
     }

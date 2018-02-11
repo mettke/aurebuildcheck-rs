@@ -2,17 +2,17 @@ use cli::{CommandLineSettings, Output};
 use data::Package;
 use json;
 
-pub fn print_packages(packages: &Vec<Package>, settings: &CommandLineSettings) {
+pub fn print_packages(packages: &[Package], settings: &CommandLineSettings) {
     match settings.output {
         Output::Console => print_console(packages, settings),
         Output::JSON => print_json(packages, settings),
     }
 }
 
-fn print_console(packages: &Vec<Package>, settings: &CommandLineSettings) {
+fn print_console(packages: &[Package], settings: &CommandLineSettings) {
     for (i, package) in packages.iter().enumerate() {
         if i != 0 {
-            println!("");
+            println!();
         }
         println!("========================================");
         println!("Package: {}", package.name);
@@ -53,7 +53,7 @@ fn print_console(packages: &Vec<Package>, settings: &CommandLineSettings) {
     }
 }
 
-fn print_json(packages: &Vec<Package>, settings: &CommandLineSettings) {
+fn print_json(packages: &[Package], settings: &CommandLineSettings) {
     let mut json_packages = json::JsonValue::new_array();
     for package in packages.iter() {
         let mut json_package = json::JsonValue::new_object();
@@ -96,7 +96,9 @@ fn print_json_library_requirements(package: &Package) -> json::JsonValue {
         json_library_requirement["library_name"] = (*library.library_name).clone().into();
         let mut json_library_requirements_array = json::JsonValue::new_array();
         library.files_requiring.iter().for_each(|file| {
-            json_library_requirements_array.push((**file).clone()).unwrap();
+            json_library_requirements_array
+                .push((**file).clone())
+                .unwrap();
         });
         json_library_requirement["files_requiring"] = json_library_requirements_array;
         json_library_requirements

@@ -1,40 +1,42 @@
 use cli::{Command, CommandLineSettings};
 use cmd;
-use data::{Error, LibraryRequired, Package, PackagesContaining,
-           ProcessingFileDependency, ProcessingPackage};
+use data::{Error, LibraryRequired, Package, PackagesContaining, ProcessingFileDependency,
+           ProcessingPackage};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 pub fn verify_packages(settings: &CommandLineSettings) -> Result<Vec<Package>, Error> {
-    let mut packages = settings.packages
+    let mut packages = settings
+        .packages
         .par_iter()
         .map(|package| verify_package(package, settings))
         .collect::<Result<Vec<ProcessingPackage>, Error>>()?
         .into_iter()
-        .map(|package| {
-            package.into()
-        })
+        .map(|package| package.into())
         .collect::<Vec<Package>>();
- 
-    packages.iter_mut().map(|mut package| {
-        setup_library_requirements(&mut package)?;
-        if settings.show_candidates {
-            setup_packages_containing(&mut package)?;
-        }
-        Ok(())
-    }).collect::<Result<Vec<_>, Error>>()?;
+
+    packages
+        .iter_mut()
+        .map(|mut package| {
+            setup_library_requirements(&mut package)?;
+            if settings.show_candidates {
+                setup_packages_containing(&mut package)?;
+            }
+            Ok(())
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
 
     Ok(packages)
 }
 
 fn verify_package<'a>(
-    package_name: &String,
+    package_name: &str,
     settings: &CommandLineSettings,
 ) -> Result<ProcessingPackage, Error<'a>> {
     let files = cmd::get_files_for_package(package_name)?;
     let filenames = get_filenames_from_files(&files);
-    let mut package = ProcessingPackage::new(package_name.clone());
+    let mut package = ProcessingPackage::new(package_name);
 
     package.file_dependencies = files
         .par_iter()
@@ -46,12 +48,12 @@ fn verify_package<'a>(
         // remove Option
         .filter_map(|element| element)
         .collect::<Vec<ProcessingFileDependency>>();
-    remove_ignored_or_packaged_libraries(&mut package, filenames, settings);
+    remove_ignored_or_packaged_libraries(&mut package, &filenames, settings);
 
     Ok(package)
 }
 
-fn get_filenames_from_files(files: &Vec<String>) -> Vec<String> {
+fn get_filenames_from_files(files: &[String]) -> Vec<String> {
     files
         .iter()
         .filter_map(|file| {
@@ -98,9 +100,9 @@ fn file_might_be_binary(file: &str) -> bool {
     true
 }
 
-fn remove_ignored_or_packaged_libraries<'a>(
+fn remove_ignored_or_packaged_libraries(
     package: &mut ProcessingPackage,
-    filenames: Vec<String>,
+    filenames: &[String],
     settings: &CommandLineSettings,
 ) {
     package
@@ -122,7 +124,7 @@ fn remove_ignored_or_packaged_libraries<'a>(
         });
     package
         .file_dependencies
-        .retain(|file_dependency| file_dependency.library_dependencies.len() > 0);
+        .retain(|file_dependency| !file_dependency.library_dependencies.is_empty());
 }
 
 fn setup_library_requirements<'a>(package: &mut Package) -> Result<(), Error<'a>> {
