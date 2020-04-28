@@ -5,34 +5,68 @@
 //! libraries.
 
 // enable additional rustc warnings
-#![warn(anonymous_parameters, missing_debug_implementations, missing_docs, trivial_casts,
-        trivial_numeric_casts, unsafe_code, unstable_features, unused_extern_crates,
-        unused_import_braces, unused_qualifications, variant_size_differences)]
+#![warn(
+    absolute_paths_not_starting_with_crate,
+    anonymous_parameters,
+    box_pointers,
+    deprecated_in_future,
+    elided_lifetimes_in_paths,
+    explicit_outlives_requirements,
+    indirect_structural_match,
+    keyword_idents,
+    macro_use_extern_crate,
+    meta_variable_misuse,
+    missing_copy_implementations,
+    missing_debug_implementations,
+    missing_docs,
+    missing_doc_code_examples,
+    non_ascii_idents,
+    private_doc_tests,
+    single_use_lifetimes,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unstable_features,
+    unused_extern_crates,
+    unused_import_braces,
+    unused_lifetimes,
+    unused_qualifications,
+    unused_results,
+    variant_size_differences
+)]
 // enable additional clippy warnings
-#![cfg_attr(feature = "cargo-clippy", warn(int_plus_one))]
-#![cfg_attr(feature = "cargo-clippy", warn(shadow_reuse, shadow_same, shadow_unrelated))]
-#![cfg_attr(feature = "cargo-clippy", warn(mut_mut))]
-#![cfg_attr(feature = "cargo-clippy", warn(nonminimal_bool))]
-#![cfg_attr(feature = "cargo-clippy", warn(pub_enum_variant_names))]
-#![cfg_attr(feature = "cargo-clippy", warn(range_plus_one))]
-#![cfg_attr(feature = "cargo-clippy", warn(string_add, string_add_assign))]
-#![cfg_attr(feature = "cargo-clippy", warn(stutter))]
-//#![cfg_attr(feature = "cargo-clippy", warn(result_unwrap_used))]
-
-#[macro_use]
-extern crate clap;
-extern crate json;
-extern crate rayon;
-extern crate regex;
+#![warn(
+    clippy::correctness,
+    clippy::restriction,
+    clippy::style,
+    clippy::pedantic,
+    clippy::complexity,
+    clippy::perf,
+    clippy::cargo,
+    clippy::nursery
+)]
+#![allow(
+    clippy::implicit_return,
+    clippy::missing_docs_in_private_items,
+    clippy::result_expect_used,
+    clippy::shadow_reuse,
+    clippy::option_expect_used,
+    clippy::wildcard_enum_match_arm,
+    clippy::exit,
+    clippy::module_name_repetitions,
+    clippy::similar_names,
+    clippy::else_if_without_else,
+    clippy::multiple_crate_versions,
+    clippy::print_stdout
+)]
 
 mod cli;
 mod cmd;
 mod data;
-mod process;
 mod output;
+mod process;
 
-use cli::Command;
-use data::Error;
+use crate::{cli::Command, data::Error};
 use std::process::exit;
 
 fn main() {
@@ -80,7 +114,7 @@ fn main() {
 ///
 /// * `result` - Result to process
 /// * `error_code` - Error Code to exit with
-fn handle_error<T>(result: Result<T, Error>, error_code: i32) -> T {
+fn handle_error<T>(result: Result<T, Error<'_>>, error_code: i32) -> T {
     match result {
         Err(e) => {
             println!("{}", e);

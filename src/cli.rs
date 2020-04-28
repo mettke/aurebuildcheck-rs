@@ -1,5 +1,8 @@
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use data::Error;
+use crate::data::Error;
+use clap::{
+    app_from_crate, crate_authors, crate_description, crate_name, crate_version, AppSettings, Arg,
+    ArgMatches, SubCommand,
+};
 use regex::RegexSet;
 
 /// Specifies the various ways to check elf files for missing libraries
@@ -34,7 +37,7 @@ pub struct CommandLineSettings {
 
 impl Default for CommandLineSettings {
     fn default() -> Self {
-        CommandLineSettings {
+        Self {
             command: Command::Ldd,
             packages: vec![],
             all_packages: false,
@@ -85,7 +88,8 @@ pub fn get_command_line_settings<'a>() -> Result<CommandLineSettings, Error<'a>>
     // by default (if not specified otherwise) only files
     // and libraries are printed. Packages are printed only
     // if specified or by default if `show_candidates` is set
-    if !settings.group_by_file && !settings.group_by_library
+    if !settings.group_by_file
+        && !settings.group_by_library
         && !settings.group_by_containing_package
     {
         settings.group_by_file = true;
@@ -96,7 +100,7 @@ pub fn get_command_line_settings<'a>() -> Result<CommandLineSettings, Error<'a>>
 }
 
 fn get_subcommand_line_settings<'a>(
-    parser: &ArgMatches,
+    parser: &ArgMatches<'_>,
     settings: &mut CommandLineSettings,
 ) -> Result<(), Error<'a>> {
     if let Some(packages) = parser.values_of_lossy("packages") {
@@ -133,11 +137,9 @@ fn get_subcommand_line_settings<'a>(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn setup_command_line_parser<'a>() -> ArgMatches<'a> {
-    App::new(crate_name!())
-        .version(crate_version!())
-        .author(crate_authors!(", "))
-        .about(crate_description!())
+    app_from_crate!()
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .subcommand(
             SubCommand::with_name("ldd")

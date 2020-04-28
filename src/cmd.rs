@@ -1,8 +1,10 @@
-use cli;
-use data::{Error, ProcessingFileDependency};
+use crate::{
+    cli,
+    data::{Error, ProcessingFileDependency},
+};
 use std::process::{Command, Output};
 
-pub fn check_required_programs(settings: &cli::CommandLineSettings) -> Result<(), Error> {
+pub fn check_required_programs(settings: &cli::CommandLineSettings) -> Result<(), Error<'_>> {
     check_required_program("pacman")?;
     check_required_program("file")?;
     match settings.command {
@@ -15,7 +17,7 @@ pub fn check_required_programs(settings: &cli::CommandLineSettings) -> Result<()
     Ok(())
 }
 
-fn check_required_program(program: &str) -> Result<(), Error> {
+fn check_required_program(program: &str) -> Result<(), Error<'_>> {
     match execute_command(Command::new("which").arg(program)) {
         Err(_) => Err(Error::Dependency(program)),
         _ => Ok(()),
@@ -25,14 +27,14 @@ fn check_required_program(program: &str) -> Result<(), Error> {
 fn execute_command<'a>(command: &mut Command) -> Result<Output, Error<'a>> {
     let out = command.output()?;
     if !out.status.success() {
-        return Err(Error::ExecutionError(
+        return Err(Error::Execution(
             String::from_utf8_lossy(&out.stderr).into_owned(),
         ));
     }
     Ok(out)
 }
 
-pub fn get_all_packages(settings: &mut cli::CommandLineSettings) -> Result<(), Error> {
+pub fn get_all_packages(settings: &mut cli::CommandLineSettings) -> Result<(), Error<'_>> {
     let out = execute_command(Command::new("pacman").arg("-Qqm"))?;
     let output = String::from_utf8_lossy(&out.stdout);
     let output = output.into_owned();
@@ -69,9 +71,9 @@ pub fn verify_files_via_ldd<'a>(file: &str) -> Result<Option<ProcessingFileDepen
     for line in output.lines() {
         if line.ends_with(" => not found") {
             let mut library_name = String::from(line.trim());
-            let new_length = library_name.len() - " => not found".len();
+            let new_length = library_name.len().saturating_sub(" => not found".len());
             library_name.truncate(new_length);
-            dependency.library_dependencies.insert(library_name);
+            let _ = dependency.library_dependencies.insert(library_name);
         }
     }
     if dependency.library_dependencies.is_empty() {

@@ -1,22 +1,25 @@
-use cli::{Command, CommandLineSettings};
-use cmd;
-use data::{Error, LibraryRequired, Package, PackagesContaining, ProcessingFileDependency,
-           ProcessingPackage};
+use crate::{
+    cli::{Command, CommandLineSettings},
+    cmd,
+    data::{
+        Error, LibraryRequired, Package, PackagesContaining, ProcessingFileDependency,
+        ProcessingPackage,
+    },
+};
 use rayon::prelude::*;
-use std::collections::HashMap;
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf, rc::Rc};
 
-pub fn verify_packages(settings: &CommandLineSettings) -> Result<Vec<Package>, Error> {
+pub fn verify_packages(settings: &CommandLineSettings) -> Result<Vec<Package>, Error<'_>> {
     let mut packages = settings
         .packages
         .par_iter()
         .map(|package| verify_package(package, settings))
-        .collect::<Result<Vec<ProcessingPackage>, Error>>()?
+        .collect::<Result<Vec<ProcessingPackage>, Error<'_>>>()?
         .into_iter()
         .map(|package| package.into())
         .collect::<Vec<Package>>();
 
-    packages
+    let _ = packages
         .iter_mut()
         .map(|mut package| {
             setup_library_requirements(&mut package)?;
@@ -25,7 +28,7 @@ pub fn verify_packages(settings: &CommandLineSettings) -> Result<Vec<Package>, E
             }
             Ok(())
         })
-        .collect::<Result<Vec<_>, Error>>()?;
+        .collect::<Result<Vec<_>, Error<'_>>>()?;
 
     Ok(packages)
 }
@@ -43,7 +46,7 @@ fn verify_package<'a>(
         // verify files parallel - will stop if error occures
         .map(|file| verify_file(file, settings))
         // collect and abort if error
-        .collect::<Result<Vec<Option<ProcessingFileDependency>>, Error>>()?
+        .collect::<Result<Vec<Option<ProcessingFileDependency>>, Error<'_>>>()?
         .into_iter()
         // remove Option
         .filter_map(|element| element)
@@ -93,7 +96,7 @@ fn file_might_be_binary(file: &str) -> bool {
                 | "rgb" | "gif" | "wav" | "ogg" | "ogv" | "avi" | "opus" | "mp3" | "po" | "txt"
                 | "jpg" | "jpeg" | "bmp" | "xcf" | "mo" | "rb" | "py" | "lua" | "config"
                 | "cfg" | "svg" | "desktop" | "conf" | "pdf" | "xz" => false,
-                "so" | _ => true,
+                _ => true,
             };
         }
     }
@@ -141,14 +144,16 @@ fn setup_library_requirements<'a>(package: &mut Package) -> Result<(), Error<'a>
                         if let Some(value) = cache.get_mut(&**library_dependency) {
                             value
                                 .files_requiring
-                                .push(file_dependency.file_name.clone());
+                                .push(Rc::<String>::clone(&file_dependency.file_name));
                         }
                     } else {
-                        cache.insert(
+                        let _ = cache.insert(
                             (**library_dependency).clone(),
                             LibraryRequired {
-                                library_name: library_dependency.clone(),
-                                files_requiring: vec![file_dependency.file_name.clone()],
+                                library_name: Rc::<String>::clone(library_dependency),
+                                files_requiring: vec![Rc::<String>::clone(
+                                    &file_dependency.file_name,
+                                )],
                             },
                         );
                     }
@@ -164,10 +169,10 @@ fn setup_packages_containing<'a>(package: &mut Package) -> Result<(), Error<'a>>
         .iter()
         .map(|library| {
             Ok(PackagesContaining {
-                library_name: library.library_name.clone(),
+                library_name: Rc::<String>::clone(&library.library_name),
                 packages_containing: cmd::get_packages_containing_library(&library.library_name)?,
             })
         })
-        .collect::<Result<Vec<PackagesContaining>, Error>>()?;
+        .collect::<Result<Vec<PackagesContaining>, Error<'_>>>()?;
     Ok(())
 }

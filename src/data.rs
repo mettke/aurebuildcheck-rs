@@ -1,58 +1,44 @@
 use regex;
-use std::{error, fmt, io};
-use std::collections::HashSet;
-use std::iter::FromIterator;
-use std::rc::Rc;
+use std::{collections::HashSet, error, fmt, io, iter::FromIterator, rc::Rc};
 
 #[derive(Debug)]
 pub enum Error<'a> {
     Dependency(&'a str),
-    Execution(io::Error),
-    ExecutionError(String),
-    RegexError(regex::Error),
+    ExecutionIO(io::Error),
+    Execution(String),
+    Regex(regex::Error),
 }
 
-impl<'a> fmt::Display for Error<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl fmt::Display for Error<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Error::Dependency(dep) => write!(f, "Dependency missing: {}", dep),
-            Error::Execution(ref err) => write!(f, "Command execution error: {}", err),
-            Error::ExecutionError(ref err) => write!(f, "Command execution error: {:#?}", err),
-            Error::RegexError(ref err) => write!(f, "Regex Error: {:#?}", err),
+            Error::ExecutionIO(ref err) => write!(f, "Command ExecutionIO error: {}", err),
+            Error::Execution(ref err) => write!(f, "Command ExecutionIO error: {}", err),
+            Error::Regex(ref err) => write!(f, "Regex Error: {}", err),
         }
     }
 }
 
-impl<'a> error::Error for Error<'a> {
-    fn description(&self) -> &str {
+impl error::Error for Error<'_> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
-            Error::Dependency(_) => {
-                "Dependency is missing and must be installed before running this command"
-            }
-            Error::Execution(ref err) => err.description(),
-            Error::ExecutionError(_) => "Execution of program failed with non zero",
-            Error::RegexError(ref err) => err.description(),
-        }
-    }
-
-    fn cause(&self) -> Option<&error::Error> {
-        match *self {
-            Error::Dependency(_) | Error::ExecutionError(_) => None,
-            Error::Execution(ref err) => Some(err),
-            Error::RegexError(ref err) => Some(err),
+            Error::Dependency(_) | Error::Execution(_) => None,
+            Error::ExecutionIO(ref err) => Some(err),
+            Error::Regex(ref err) => Some(err),
         }
     }
 }
 
-impl<'a> From<io::Error> for Error<'a> {
+impl From<io::Error> for Error<'_> {
     fn from(err: io::Error) -> Self {
-        Error::Execution(err)
+        Error::ExecutionIO(err)
     }
 }
 
-impl<'a> From<regex::Error> for Error<'a> {
+impl From<regex::Error> for Error<'_> {
     fn from(err: regex::Error) -> Self {
-        Error::RegexError(err)
+        Error::Regex(err)
     }
 }
 
@@ -64,7 +50,7 @@ pub struct ProcessingPackage {
 
 impl ProcessingPackage {
     pub fn new<S: Into<String>>(name: S) -> Self {
-        ProcessingPackage {
+        Self {
             name: name.into(),
             file_dependencies: vec![],
         }
@@ -87,7 +73,7 @@ pub struct Package {
 
 impl From<ProcessingPackage> for Package {
     fn from(package: ProcessingPackage) -> Self {
-        Package {
+        Self {
             name: package.name,
             file_dependencies: package
                 .file_dependencies
@@ -108,13 +94,10 @@ pub struct FileDependency {
 
 impl From<ProcessingFileDependency> for FileDependency {
     fn from(dependency: ProcessingFileDependency) -> Self {
-        FileDependency {
+        Self {
             file_name: Rc::new(dependency.file_name),
             library_dependencies: HashSet::from_iter(
-                dependency
-                    .library_dependencies
-                    .into_iter()
-                    .map(|entry| Rc::new(entry)),
+                dependency.library_dependencies.into_iter().map(Rc::new),
             ),
         }
     }
