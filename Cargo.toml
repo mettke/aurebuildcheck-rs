@@ -1,6 +1,6 @@
 [package]
 name = "aurebuildcheck-rs"
-version = "0.2.4"
+version = "0.2.5"
 authors = [
     "Matthias Krüger <matthias.krueger@famsik.de>",
     "Marc Mettke <marc@itmettke.de>"
